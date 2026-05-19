@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>意识能量追踪</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=DM+Serif+Display:ital@0;1&family=Noto+Sans+SC:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a12;
+    --bg2: #0f0f1a;
+    --surface: rgba(255,255,255,0.04);
+    --surface-hover: rgba(255,255,255,0.08);
+    --border: rgba(255,255,255,0.08);
+    --text: #e8e4f0;
+    --text-muted: rgba(232,228,240,0.45);
+    --radius: 16px;
+    --font-serif: 'DM Serif Display', 'Noto Serif SC', serif;
+    --font-sans: 'Noto Sans SC', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Ambient background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 50% at 20% 10%, rgba(120,60,255,0.12) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 40% at 80% 80%, rgba(255,160,80,0.08) 0%, transparent 60%),
+      radial-gradient(ellipse 40% 60% at 60% 30%, rgba(60,200,200,0.06) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .app { position: relative; z-index: 1; max-width: 480px; margin: 0 auto; padding: 0 0 80px; }
+
+  /* ── Header ── */
+  .header {
+    padding: 28px 20px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .header-title { font-family: var(--font-serif); font-size: 1.4rem; letter-spacing: 0.02em; }
+  .header-title span { opacity: 0.4; font-size: 0.75rem; display: block; font-family: var(--font-sans); font-weight: 300; letter-spacing: 0.1em; margin-top: 2px; }
+  .lang-toggle {
+    display: flex; gap: 4px; align-items: center;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 20px; padding: 4px;
+  }
+  .lang-btn {
+    background: none; border: none; color: var(--text-muted);
+    font-size: 0.72rem; font-family: var(--font-sans);
+    padding: 4px 10px; border-radius: 16px; cursor: pointer;
+    transition: all 0.2s;
+  }
+  .lang-btn.active { background: rgba(255,255,255,0.12); color: var(--text); }
+
+  /* ── Tab bar ── */
+  .tabs {
+    display: flex; gap: 0;
+    padding: 0 20px 20px;
+  }
+  .tab-btn {
+    flex: 1; background: none; border: none;
+    padding: 10px 0; font-family: var(--font-sans); font-size: 0.85rem;
+    color: var(--text-muted); cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s; letter-spacing: 0.05em;
+  }
+  .tab-btn.active { color: var(--text); border-bottom-color: rgba(180,140,255,0.8); }
+
+  /* ── Views ── */
+  .view { display: none; padding: 0 16px; }
+  .view.active { display: block; }
+
+  /* ── Level grid ── */
+  .section-label {
+    font-size: 0.7rem; letter-spacing: 0.12em; color: var(--text-muted);
+    text-transform: uppercase; padding: 0 4px 10px;
+  }
+  .levels-group { margin-bottom: 20px; }
+  .group-title {
+    font-size: 0.68rem; letter-spacing: 0.15em; text-transform: uppercase;
+    color: var(--text-muted); opacity: 0.6; padding: 0 4px 8px;
+  }
+  .level-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+  .level-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 14px 12px;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    position: relative;
+    overflow: hidden;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .level-card:active { transform: scale(0.97); }
+  .level-card:hover { background: var(--surface-hover); border-color: rgba(255,255,255,0.14); }
+  .level-card.selected {
+    border-color: var(--card-color, rgba(180,140,255,0.6));
+    background: color-mix(in srgb, var(--card-color, rgba(180,140,255,0.3)) 15%, transparent);
+    box-shadow: 0 0 20px color-mix(in srgb, var(--card-color, rgba(180,140,255,0.3)) 20%, transparent);
+  }
+  .level-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--card-color, transparent);
+    opacity: 0.7;
+  }
+  .card-name { font-family: var(--font-serif); font-size: 1.1rem; margin-bottom: 2px; }
+  .card-score { font-size: 0.72rem; color: var(--text-muted); letter-spacing: 0.05em; }
+  .card-emoji { font-size: 1.3rem; position: absolute; right: 12px; top: 12px; }
+
+  /* ── Note input ── */
+  .note-section { margin: 16px 0; }
+  .note-textarea {
+    width: 100%; background: var(--surface);
+    border: 1px solid var(--border); border-radius: var(--radius);
+    color: var(--text); font-family: var(--font-sans);
+    font-size: 0.9rem; padding: 14px 16px;
+    resize: none; outline: none;
+    transition: border-color 0.2s;
+    line-height: 1.6;
+  }
+  .note-textarea::placeholder { color: var(--text-muted); }
+  .note-textarea:focus { border-color: rgba(180,140,255,0.4); }
+
+  /* ── Log button ── */
+  .log-btn {
+    width: 100%; padding: 15px;
+    background: linear-gradient(135deg, rgba(140,100,255,0.9), rgba(100,160,255,0.9));
+    border: none; border-radius: var(--radius);
+    color: #fff; font-family: var(--font-sans); font-size: 1rem;
+    font-weight: 500; letter-spacing: 0.06em;
+    cursor: pointer; transition: all 0.2s;
+    margin-top: 8px;
+  }
+  .log-btn:hover { opacity: 0.92; transform: translateY(-1px); }
+  .log-btn:active { transform: scale(0.98); }
+  .log-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: rgba(140,100,255,0.9); backdrop-filter: blur(12px);
+    color: #fff; padding: 10px 24px; border-radius: 24px;
+    font-size: 0.85rem; letter-spacing: 0.04em;
+    opacity: 0; transition: all 0.3s; pointer-events: none; z-index: 100;
+    white-space: nowrap;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ── History view ── */
+  .history-empty {
+    text-align: center; padding: 60px 20px;
+    color: var(--text-muted); font-size: 0.9rem; line-height: 2;
+  }
+  .history-empty .empty-icon { font-size: 3rem; margin-bottom: 12px; opacity: 0.4; }
+
+  .history-item {
+    display: flex; align-items: flex-start; gap: 14px;
+    padding: 14px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 8px;
+    position: relative;
+    overflow: hidden;
+    animation: fadeIn 0.25s ease;
+  }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  .history-item::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--item-color, rgba(180,140,255,0.6));
+  }
+  .item-orb {
+    width: 42px; height: 42px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, color-mix(in srgb, var(--item-color, #a080ff) 80%, white), var(--item-color, #a080ff));
+    flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem;
+  }
+  .item-body { flex: 1; min-width: 0; }
+  .item-name { font-family: var(--font-serif); font-size: 1rem; margin-bottom: 2px; }
+  .item-score { font-size: 0.7rem; color: var(--text-muted); letter-spacing: 0.05em; }
+  .item-note { font-size: 0.82rem; color: var(--text-muted); margin-top: 6px; line-height: 1.5; word-break: break-word; }
+  .item-time { font-size: 0.68rem; color: var(--text-muted); opacity: 0.6; margin-top: 4px; }
+  .item-delete {
+    background: none; border: none; color: var(--text-muted);
+    font-size: 1rem; cursor: pointer; padding: 4px;
+    opacity: 0; transition: opacity 0.2s;
+    flex-shrink: 0;
+  }
+  .history-item:hover .item-delete { opacity: 0.5; }
+  .item-delete:hover { opacity: 1 !important; }
+
+  .history-controls {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0 4px 14px;
+  }
+  .clear-btn {
+    background: none; border: 1px solid var(--border);
+    color: var(--text-muted); font-size: 0.75rem;
+    padding: 6px 14px; border-radius: 12px; cursor: pointer;
+    font-family: var(--font-sans); transition: all 0.2s;
+  }
+  .clear-btn:hover { border-color: rgba(255,100,100,0.4); color: rgba(255,120,120,0.9); }
+  .record-count { font-size: 0.75rem; color: var(--text-muted); }
+
+  /* ── Stats view ── */
+  .stats-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px; margin-bottom: 12px;
+  }
+  .stats-title { font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 14px; }
+  .stat-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .stat-row:last-child { border-bottom: none; }
+  .stat-label { font-size: 0.85rem; display: flex; align-items: center; gap: 8px; }
+  .stat-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .stat-value { font-family: var(--font-serif); font-size: 1.1rem; }
+  .stat-sub { font-size: 0.7rem; color: var(--text-muted); }
+
+  .chart-wrap { padding: 0 0 8px; }
+  .chart-bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .chart-label { font-size: 0.75rem; width: 48px; text-align: right; color: var(--text-muted); flex-shrink: 0; }
+  .chart-bar-bg { flex: 1; height: 8px; background: rgba(255,255,255,0.05); border-radius: 4px; overflow: hidden; }
+  .chart-bar-fill { height: 100%; border-radius: 4px; transition: width 0.6s ease; }
+  .chart-count { font-size: 0.7rem; color: var(--text-muted); width: 20px; flex-shrink: 0; }
+
+  /* ── Timeline mini-chart ── */
+  .timeline-wrap { overflow-x: auto; padding-bottom: 4px; }
+  .timeline-svg { display: block; }
+
+  /* ── Selected indicator ── */
+  .selected-display {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 14px 16px;
+    margin-bottom: 14px; display: flex; align-items: center; gap: 12px;
+    min-height: 60px;
+  }
+  .selected-orb {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, color-mix(in srgb, var(--sel-color, #555) 70%, white), var(--sel-color, #555));
+    flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+    font-size: 1rem; transition: background 0.3s;
+  }
+  .selected-text { flex: 1; }
+  .selected-name { font-family: var(--font-serif); font-size: 1rem; }
+  .selected-hint { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-title">
+      <span id="subtitle-text">HAWKINS SCALE</span>
+      <span id="title-text">意识能量追踪</span>
+    </div>
+    <div class="lang-toggle">
+      <button class="lang-btn active" onclick="setLang('zh-CN')" id="btn-cn">简体</button>
+      <button class="lang-btn" onclick="setLang('zh-TW')" id="btn-tw">繁體</button>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="showTab('log')" id="tab-log" data-i="tab_log">记录</button>
+    <button class="tab-btn" onclick="showTab('history')" id="tab-history" data-i="tab_history">历史</button>
+    <button class="tab-btn" onclick="showTab('stats')" id="tab-stats" data-i="tab_stats">统计</button>
+  </div>
+
+  <!-- ── Log View ── -->
+  <div class="view active" id="view-log">
+    <div class="selected-display" id="selected-display">
+      <div class="selected-orb" id="selected-orb">✦</div>
+      <div class="selected-text">
+        <div class="selected-name" id="selected-name" data-i="select_prompt">选择你当前的状态</div>
+        <div class="selected-hint" id="selected-hint" data-i="select_hint">点击下方能量等级</div>
+      </div>
+    </div>
+
+    <div id="levels-container"></div>
+
+    <div class="note-section">
+      <textarea class="note-textarea" id="note-input" rows="3" data-placeholder-i="note_placeholder"></textarea>
+    </div>
+    <button class="log-btn" id="log-btn" onclick="logEntry()" disabled data-i="log_btn">记录当前状态</button>
+  </div>
+
+  <!-- ── History View ── -->
+  <div class="view" id="view-history">
+    <div class="history-controls">
+      <span class="record-count" id="record-count"></span>
+      <button class="clear-btn" onclick="clearAll()" data-i="clear_btn">清除全部</button>
+    </div>
+    <div id="history-list"></div>
+  </div>
+
+  <!-- ── Stats View ── -->
+  <div class="view" id="view-stats">
+    <div id="stats-container"></div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Data ──
+const LEVELS = [
+  { key:'enlightenment', score:'700–1000', emoji:'☀️', color:'#fff7aa',  groupEn:'transcend' },
+  { key:'peace',         score:'600',      emoji:'🌌', color:'#c8f0ff',  groupEn:'transcend' },
+  { key:'joy',           score:'540',      emoji:'✨', color:'#ffe0a0',  groupEn:'transcend' },
+  { key:'love',          score:'500',      emoji:'💗', color:'#ffb0c8',  groupEn:'transcend' },
+  { key:'reason',        score:'400',      emoji:'🔷', color:'#90d8ff',  groupEn:'constructive' },
+  { key:'acceptance',    score:'350',      emoji:'🌿', color:'#a8e8c0',  groupEn:'constructive' },
+  { key:'willingness',   score:'310',      emoji:'🌱', color:'#b8f0b0',  groupEn:'constructive' },
+  { key:'neutrality',    score:'250',      emoji:'⚪', color:'#d0d0d0',  groupEn:'constructive' },
+  { key:'courage',       score:'200',      emoji:'🔥', color:'#ffb060',  groupEn:'constructive' },
+  { key:'pride',         score:'175',      emoji:'🦁', color:'#ffd080',  groupEn:'negative' },
+  { key:'anger',         score:'150',      emoji:'⚡', color:'#ff8060',  groupEn:'negative' },
+  { key:'desire',        score:'125',      emoji:'🌀', color:'#c080ff',  groupEn:'negative' },
+  { key:'fear',          score:'100',      emoji:'🌑', color:'#8090c0',  groupEn:'negative' },
+  { key:'grief',         score:'75',       emoji:'🌧️', color:'#8080a0',  groupEn:'negative' },
+  { key:'apathy',        score:'50',       emoji:'🪨', color:'#6a6a7a',  groupEn:'negative' },
+  { key:'guilt',         score:'30',       emoji:'🖤', color:'#5a5a6a',  groupEn:'negative' },
+  { key:'shame',         score:'20',       emoji:'🌫️', color:'#4a4a5a',  groupEn:'negative' },
+];
+
+const I18N = {
+  'zh-CN': {
+    title: '意识能量追踪', subtitle: 'HAWKINS SCALE',
+    tab_log: '记录', tab_history: '历史', tab_stats: '统计',
+    select_prompt: '选择你当前的状态', select_hint: '点击下方能量等级',
+    note_placeholder: '添加备注（可选）…',
+    log_btn: '记录当前状态',
+    clear_btn: '清除全部',
+    group_transcend: '超越意识', group_constructive: '建设性意识', group_negative: '负面意识',
+    records_count: n => `共 ${n} 条记录`,
+    no_records: '暂无记录\n点击「记录」开始追踪你的意识能量',
+    logged_ok: '已记录 ✓',
+    confirm_clear: '确定清除所有记录？',
+    confirm_delete: '删除这条记录？',
+    stats_no_data: '暂无数据',
+    stat_total: '总记录数', stat_avg: '平均能量值', stat_highest: '最高记录', stat_latest: '最近记录',
+    freq_title: '各等级频率',
+    timeline_title: '近期趋势（最近20条）',
+    levels: {
+      enlightenment:'开悟', peace:'平静', joy:'喜悦', love:'爱',
+      reason:'理智', acceptance:'宽恕', willingness:'主动', neutrality:'满意',
+      courage:'勇气', pride:'骄傲', anger:'愤怒', desire:'欲望',
+      fear:'恐惧', grief:'悲伤', apathy:'冷漠', guilt:'内疚', shame:'羞愧',
+    }
+  },
+  'zh-TW': {
+    title: '意識能量追蹤', subtitle: 'HAWKINS SCALE',
+    tab_log: '記錄', tab_history: '歷史', tab_stats: '統計',
+    select_prompt: '選擇你目前的狀態', select_hint: '點擊下方能量等級',
+    note_placeholder: '新增備註（可選）…',
+    log_btn: '記錄目前狀態',
+    clear_btn: '清除全部',
+    group_transcend: '超越意識', group_constructive: '建設性意識', group_negative: '負面意識',
+    records_count: n => `共 ${n} 筆記錄`,
+    no_records: '尚無記錄\n點擊「記錄」開始追蹤你的意識能量',
+    logged_ok: '已記錄 ✓',
+    confirm_clear: '確定清除所有記錄？',
+    confirm_delete: '刪除這筆記錄？',
+    stats_no_data: '尚無資料',
+    stat_total: '總記錄數', stat_avg: '平均能量值', stat_highest: '最高記錄', stat_latest: '最近記錄',
+    freq_title: '各等級頻率',
+    timeline_title: '近期趨勢（最近20筆）',
+    levels: {
+      enlightenment:'開悟', peace:'平靜', joy:'喜悅', love:'愛',
+      reason:'理智', acceptance:'寬恕', willingness:'主動', neutrality:'滿意',
+      courage:'勇氣', pride:'驕傲', anger:'憤怒', desire:'慾望',
+      fear:'恐懼', grief:'悲傷', apathy:'冷漠', guilt:'內疚', shame:'羞愧',
+    }
+  }
+};
+
+// ── State ──
+let lang = localStorage.getItem('hk_lang') || 'zh-CN';
+let selectedKey = null;
+let records = JSON.parse(localStorage.getItem('hk_records') || '[]');
+
+// ── i18n ──
+function t(key) { return I18N[lang][key] || key; }
+function tl(key) { return I18N[lang].levels[key] || key; }
+
+function setLang(l) {
+  lang = l; localStorage.setItem('hk_lang', l);
+  document.getElementById('btn-cn').classList.toggle('active', l === 'zh-CN');
+  document.getElementById('btn-tw').classList.toggle('active', l === 'zh-TW');
+  document.documentElement.lang = l;
+  renderAll();
+}
+
+// ── Render levels ──
+function buildLevels() {
+  const groups = [
+    { id: 'transcend',    keys: ['enlightenment','peace','joy','love'] },
+    { id: 'constructive', keys: ['reason','acceptance','willingness','neutrality','courage'] },
+    { id: 'negative',     keys: ['pride','anger','desire','fear','grief','apathy','guilt','shame'] },
+  ];
+  const container = document.getElementById('levels-container');
+  container.innerHTML = '';
+  groups.forEach(g => {
+    const wrap = document.createElement('div');
+    wrap.className = 'levels-group';
+    const title = document.createElement('div');
+    title.className = 'group-title';
+    title.textContent = t('group_' + g.id);
+    wrap.appendChild(title);
+    const grid = document.createElement('div');
+    grid.className = 'level-grid';
+    g.keys.forEach(key => {
+      const lv = LEVELS.find(l => l.key === key);
+      const card = document.createElement('div');
+      card.className = 'level-card' + (selectedKey === key ? ' selected' : '');
+      card.style.setProperty('--card-color', lv.color);
+      card.innerHTML = `<div class="card-emoji">${lv.emoji}</div><div class="card-name">${tl(key)}</div><div class="card-score">${lv.score}</div>`;
+      card.onclick = () => selectLevel(key);
+      grid.appendChild(card);
+    });
+    wrap.appendChild(grid);
+    container.appendChild(wrap);
+  });
+}
+
+function selectLevel(key) {
+  selectedKey = key;
+  const lv = LEVELS.find(l => l.key === key);
+  // Update cards
+  document.querySelectorAll('.level-card').forEach(c => c.classList.remove('selected'));
+  event.currentTarget.classList.add('selected');
+  // Update display
+  const orb = document.getElementById('selected-orb');
+  orb.textContent = lv.emoji;
+  orb.style.setProperty('--sel-color', lv.color);
+  document.getElementById('selected-name').textContent = `${tl(key)}  ·  ${lv.score}`;
+  document.getElementById('selected-hint').textContent = '';
+  document.getElementById('log-btn').disabled = false;
+}
+
+// ── Log entry ──
+function logEntry() {
+  if (!selectedKey) return;
+  const lv = LEVELS.find(l => l.key === selectedKey);
+  const note = document.getElementById('note-input').value.trim();
+  const entry = {
+    id: Date.now(),
+    key: selectedKey,
+    score: lv.score,
+    note,
+    ts: new Date().toISOString()
+  };
+  records.unshift(entry);
+  localStorage.setItem('hk_records', JSON.stringify(records));
+  // Reset
+  selectedKey = null;
+  document.getElementById('note-input').value = '';
+  document.getElementById('log-btn').disabled = true;
+  document.getElementById('selected-orb').textContent = '✦';
+  document.getElementById('selected-orb').style.removeProperty('--sel-color');
+  document.getElementById('selected-name').textContent = t('select_prompt');
+  document.getElementById('selected-hint').textContent = t('select_hint');
+  buildLevels();
+  showToast(t('logged_ok'));
+}
+
+// ── Toast ──
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2000);
+}
+
+// ── History ──
+function renderHistory() {
+  const list = document.getElementById('history-list');
+  const count = document.getElementById('record-count');
+  count.textContent = t('records_count')(records.length);
+  if (!records.length) {
+    list.innerHTML = `<div class="history-empty"><div class="empty-icon">🌙</div><div>${t('no_records').replace('\n','<br>')}</div></div>`;
+    return;
+  }
+  list.innerHTML = records.map(r => {
+    const lv = LEVELS.find(l => l.key === r.key);
+    const d = new Date(r.ts);
+    const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    return `<div class="history-item" style="--item-color:${lv.color}">
+      <div class="item-orb" style="--item-color:${lv.color}">${lv.emoji}</div>
+      <div class="item-body">
+        <div class="item-name">${tl(r.key)}</div>
+        <div class="item-score">${r.score}</div>
+        ${r.note ? `<div class="item-note">${escapeHtml(r.note)}</div>` : ''}
+        <div class="item-time">${dateStr}</div>
+      </div>
+      <button class="item-delete" onclick="deleteEntry(${r.id})" title="删除">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function deleteEntry(id) {
+  if (!confirm(t('confirm_delete'))) return;
+  records = records.filter(r => r.id !== id);
+  localStorage.setItem('hk_records', JSON.stringify(records));
+  renderHistory();
+  renderStats();
+}
+
+function clearAll() {
+  if (!records.length) return;
+  if (!confirm(t('confirm_clear'))) return;
+  records = [];
+  localStorage.setItem('hk_records', JSON.stringify(records));
+  renderHistory();
+  renderStats();
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── Stats ──
+function parseScore(s) {
+  if (s.includes('–')) return 850;
+  return parseInt(s);
+}
+
+function renderStats() {
+  const container = document.getElementById('stats-container');
+  if (!records.length) {
+    container.innerHTML = `<div class="history-empty"><div class="empty-icon">📊</div><div>${t('stats_no_data')}</div></div>`;
+    return;
+  }
+  const scores = records.map(r => parseScore(r.score));
+  const avg = Math.round(scores.reduce((a,b)=>a+b,0)/scores.length);
+  const max = Math.max(...scores);
+  const maxEntry = records.find(r => parseScore(r.score) === max);
+  const latest = records[0];
+
+  // Frequency map
+  const freq = {};
+  records.forEach(r => { freq[r.key] = (freq[r.key]||0)+1; });
+  const maxFreq = Math.max(...Object.values(freq));
+
+  // Timeline (last 20)
+  const recent = records.slice(0,20).reverse();
+  const timelinePoints = recent.map(r => parseScore(r.score));
+
+  let html = `
+  <div class="stats-card">
+    <div class="stats-title">${t('stat_total')} / ${t('stat_avg')}</div>
+    <div class="stat-row">
+      <div class="stat-label">${t('stat_total')}</div>
+      <div class="stat-value">${records.length}<span class="stat-sub"> 条</span></div>
+    </div>
+    <div class="stat-row">
+      <div class="stat-label">${t('stat_avg')}</div>
+      <div class="stat-value">${avg}</div>
+    </div>
+    <div class="stat-row">
+      <div class="stat-label">${t('stat_highest')}</div>
+      <div class="stat-value" style="color:${LEVELS.find(l=>l.key===maxEntry.key).color}">${tl(maxEntry.key)} <span class="stat-sub">${maxEntry.score}</span></div>
+    </div>
+    <div class="stat-row">
+      <div class="stat-label">${t('stat_latest')}</div>
+      <div class="stat-value" style="color:${LEVELS.find(l=>l.key===latest.key).color}">${tl(latest.key)}</div>
+    </div>
+  </div>`;
+
+  // Timeline SVG
+  if (recent.length >= 2) {
+    const W = 400, H = 80, PAD = 12;
+    const minS = Math.min(...timelinePoints), maxS = Math.max(...timelinePoints);
+    const range = maxS - minS || 1;
+    const pts = timelinePoints.map((v,i) => {
+      const x = PAD + (i/(timelinePoints.length-1))*(W-2*PAD);
+      const y = PAD + (1-(v-minS)/range)*(H-2*PAD);
+      return `${x},${y}`;
+    }).join(' ');
+    html += `<div class="stats-card">
+      <div class="stats-title">${t('timeline_title')}</div>
+      <div class="timeline-wrap">
+      <svg class="timeline-svg" viewBox="0 0 ${W} ${H}" width="100%" style="max-width:400px">
+        <defs>
+          <linearGradient id="tg" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="#6060c0" stop-opacity="0.6"/>
+            <stop offset="100%" stop-color="#80d8ff" stop-opacity="0.9"/>
+          </linearGradient>
+        </defs>
+        <polyline points="${pts}" fill="none" stroke="url(#tg)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        ${timelinePoints.map((v,i) => {
+          const x = PAD + (i/(timelinePoints.length-1))*(W-2*PAD);
+          const y = PAD + (1-(v-minS)/range)*(H-2*PAD);
+          const lv = LEVELS.find(l => l.key === recent[i].key);
+          return `<circle cx="${x}" cy="${y}" r="3.5" fill="${lv.color}" opacity="0.9"/>`;
+        }).join('')}
+      </svg></div>
+    </div>`;
+  }
+
+  // Frequency bars
+  html += `<div class="stats-card"><div class="stats-title">${t('freq_title')}</div><div class="chart-wrap">`;
+  LEVELS.forEach(lv => {
+    const c = freq[lv.key] || 0;
+    if (!c) return;
+    const pct = Math.round((c/maxFreq)*100);
+    html += `<div class="chart-bar-row">
+      <div class="chart-label">${tl(lv.key)}</div>
+      <div class="chart-bar-bg"><div class="chart-bar-fill" style="width:${pct}%;background:${lv.color}"></div></div>
+      <div class="chart-count">${c}</div>
+    </div>`;
+  });
+  html += '</div></div>';
+
+  container.innerHTML = html;
+}
+
+// ── Tabs ──
+function showTab(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('view-'+name).classList.add('active');
+  document.getElementById('tab-'+name).classList.add('active');
+  if (name === 'history') renderHistory();
+  if (name === 'stats') renderStats();
+}
+
+// ── Full render ──
+function renderAll() {
+  document.title = t('title');
+  document.getElementById('title-text').textContent = t('title');
+  document.getElementById('subtitle-text').textContent = t('subtitle');
+  // Tabs
+  ['log','history','stats'].forEach(k => {
+    document.getElementById('tab-'+k).textContent = t('tab_'+k);
+  });
+  // Note placeholder
+  document.getElementById('note-input').placeholder = t('note_placeholder');
+  // Log button
+  document.getElementById('log-btn').textContent = t('log_btn');
+  // Clear btn
+  document.querySelector('[data-i="clear_btn"]').textContent = t('clear_btn');
+  // Selected display
+  if (!selectedKey) {
+    document.getElementById('selected-name').textContent = t('select_prompt');
+    document.getElementById('selected-hint').textContent = t('select_hint');
+  }
+  buildLevels();
+  // Re-render current active view's dynamic content
+  const active = document.querySelector('.view.active').id;
+  if (active === 'view-history') renderHistory();
+  if (active === 'view-stats') renderStats();
+}
+
+// ── Init ──
+renderAll();
+</script>
+</body>
+</html>
