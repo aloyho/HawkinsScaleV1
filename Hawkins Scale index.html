@@ -125,6 +125,7 @@
   }
   .card-name { font-family: var(--font-serif); font-size: 1.1rem; margin-bottom: 2px; }
   .card-score { font-size: 0.72rem; color: var(--text-muted); letter-spacing: 0.05em; }
+  .card-desc { font-size: 0.68rem; color: var(--text-muted); opacity: 0.7; margin-top: 5px; line-height: 1.4; padding-right: 24px; }
   .card-emoji { font-size: 1.3rem; position: absolute; right: 12px; top: 12px; }
 
   /* ── Note input ── */
@@ -352,6 +353,47 @@ const LEVELS = [
   { key:'shame',         score:'20',       emoji:'🌫️', color:'#4a4a5a',  groupEn:'negative' },
 ];
 
+const DESCS = {
+  'zh-CN': {
+    enlightenment: '合一、无我',
+    peace:         '完美、和平、安详',
+    joy:           '乐观、慈悲、非常有耐性',
+    love:          '专注生活中美好、幸福',
+    reason:        '智慧、创造者',
+    acceptance:    '谅解事物没有对错',
+    willingness:   '真诚、友善、敞开、成长',
+    neutrality:    '信任、活力、安全感',
+    courage:       '把握机会、信心、肯定',
+    pride:         '自我膨胀、抵制成长、狂妄',
+    anger:         '憎恨、侵触心灵、抱怨',
+    desire:        '上瘾、贪婪',
+    fear:          '压抑、焦虑、退缩、阻碍成长',
+    grief:         '失落、依赖、悲观',
+    apathy:        '绝望、自我放弃',
+    guilt:         '懊悔、自责、自我否定',
+    shame:         '接近死亡、自我封闭、严重影响身心健康',
+  },
+  'zh-TW': {
+    enlightenment: '合一、無我',
+    peace:         '完美、和平、安詳',
+    joy:           '樂觀、慈悲、非常有耐性',
+    love:          '專注生活中美好、幸福',
+    reason:        '智慧、創造者',
+    acceptance:    '諒解事物沒有對錯',
+    willingness:   '真誠、友善、敞開、成長',
+    neutrality:    '信任、活力、安全感',
+    courage:       '把握機會、信心、肯定',
+    pride:         '自我膨脹、抵制成長、狂妄',
+    anger:         '憎恨、侵觸心靈、抱怨',
+    desire:        '上癮、貪婪',
+    fear:          '壓抑、焦慮、退縮、阻礙成長',
+    grief:         '失落、依賴、悲觀',
+    apathy:        '絕望、自我放棄',
+    guilt:         '懊悔、自責、自我否定',
+    shame:         '接近死亡、自我封閉、嚴重影響身心健康',
+  }
+};
+
 const I18N = {
   'zh-CN': {
     title: '意识能量追踪', subtitle: 'HAWKINS SCALE',
@@ -443,7 +485,7 @@ function buildLevels() {
       const card = document.createElement('div');
       card.className = 'level-card' + (selectedKey === key ? ' selected' : '');
       card.style.setProperty('--card-color', lv.color);
-      card.innerHTML = `<div class="card-emoji">${lv.emoji}</div><div class="card-name">${tl(key)}</div><div class="card-score">${lv.score}</div>`;
+      card.innerHTML = `<div class="card-emoji">${lv.emoji}</div><div class="card-name">${tl(key)}</div><div class="card-score">${lv.score}</div><div class="card-desc">${DESCS[lang][key]}</div>`;
       card.onclick = () => selectLevel(key);
       grid.appendChild(card);
     });
