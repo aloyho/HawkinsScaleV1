@@ -1,0 +1,1255 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>我的能量觉察 · My Energy Flow</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;600&family=Noto+Sans+SC:wght@300;400;500&display=swap');
+
+:root {
+  --bg: #03060f;
+  --surface: rgba(255,255,255,0.04);
+  --surface2: rgba(255,255,255,0.07);
+  --border: rgba(255,255,255,0.10);
+  --border2: rgba(255,255,255,0.15);
+  --text: rgba(255,255,255,0.90);
+  --text2: rgba(255,255,255,0.55);
+  --text3: rgba(255,255,255,0.30);
+  --accent: #7eb8f7;
+  --accent2: #a78bfa;
+  --accent3: #67e8a9;
+  --gold: #f0c070;
+  --low: #f87171;
+  --mid: #fbbf24;
+  --high: #34d399;
+  --peak: #818cf8;
+  --radius: 16px;
+  --radius-sm: 10px;
+  --glow: 0 0 30px rgba(126,184,247,0.15);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+html, body {
+  height:100%; background:var(--bg);
+  color:var(--text); font-family:'Noto Sans SC',sans-serif;
+  font-size:15px; line-height:1.6; overflow-x:hidden;
+}
+
+/* STARS */
+#stars-canvas {
+  position:fixed; inset:0; z-index:0; pointer-events:none;
+}
+
+/* LAYOUT */
+#app {
+  position:relative; z-index:1;
+  min-height:100vh;
+  padding-bottom:80px;
+  max-width:480px; margin:0 auto;
+}
+
+/* NAV */
+#nav {
+  position:fixed; bottom:0; left:50%; transform:translateX(-50%);
+  width:100%; max-width:480px; z-index:100;
+  background:rgba(5,10,25,0.85);
+  backdrop-filter:blur(24px);
+  border-top:1px solid var(--border);
+  display:flex; align-items:stretch; height:68px;
+}
+.nav-btn {
+  flex:1; display:flex; flex-direction:column; align-items:center;
+  justify-content:center; gap:4px; background:none; border:none;
+  color:var(--text3); cursor:pointer; font-family:inherit;
+  font-size:11px; transition:color .25s; padding:8px 0;
+}
+.nav-btn.active { color:var(--accent); }
+.nav-btn svg { width:22px; height:22px; }
+.nav-btn .dot {
+  width:4px; height:4px; border-radius:50%;
+  background:var(--accent); opacity:0; transition:opacity .25s;
+  margin-top:-2px;
+}
+.nav-btn.active .dot { opacity:1; }
+
+/* PAGES */
+.page { display:none; padding:24px 16px 8px; }
+.page.active { display:block; }
+
+/* HEADER */
+.page-header {
+  text-align:center; padding:20px 0 24px;
+}
+.page-header .date-time {
+  font-size:12px; color:var(--text3); letter-spacing:0.08em;
+  margin-bottom:8px;
+}
+.page-header h1 {
+  font-family:'Noto Serif SC',serif;
+  font-size:22px; font-weight:300;
+  color:var(--text);
+  line-height:1.4;
+}
+.page-header p {
+  font-size:13px; color:var(--text2); margin-top:6px;
+}
+
+/* GLASS CARD */
+.card {
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:18px 16px;
+  margin-bottom:14px;
+  backdrop-filter:blur(12px);
+}
+.card-title {
+  font-size:12px; letter-spacing:0.12em;
+  color:var(--text3); text-transform:uppercase;
+  margin-bottom:12px; display:flex; align-items:center; gap:8px;
+}
+.card-title::after {
+  content:''; flex:1; height:1px; background:var(--border);
+}
+
+/* COLLAPSIBLE */
+.collapsible-header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:12px 16px; cursor:pointer;
+  background:var(--surface2);
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  margin-bottom:8px;
+  transition:background .2s;
+  user-select:none;
+}
+.collapsible-header:hover { background:rgba(255,255,255,0.09); }
+.collapsible-header h3 {
+  font-size:14px; font-weight:500;
+  display:flex; align-items:center; gap:8px;
+}
+.collapsible-header .chevron {
+  transition:transform .3s; color:var(--text3); font-size:12px;
+}
+.collapsible-header.open .chevron { transform:rotate(180deg); }
+.collapsible-body {
+  display:none; padding:12px 4px 4px;
+}
+.collapsible-body.open { display:flex; flex-wrap:wrap; gap:8px; }
+
+/* CHIPS */
+.chip {
+  padding:7px 14px; border-radius:20px;
+  border:1px solid var(--border);
+  background:rgba(255,255,255,0.04);
+  color:var(--text2); font-size:13px;
+  cursor:pointer; transition:all .2s;
+  font-family:inherit; user-select:none;
+}
+.chip:hover { border-color:var(--accent); color:var(--text); }
+.chip.selected {
+  background:rgba(126,184,247,0.15);
+  border-color:var(--accent);
+  color:var(--accent);
+}
+.chip.selected-high {
+  background:rgba(103,232,169,0.15);
+  border-color:var(--accent3);
+  color:var(--accent3);
+}
+
+/* ENERGY RESULT */
+#result-card {
+  display:none;
+}
+#result-card.visible { display:block; }
+
+.energy-level-display {
+  text-align:center; padding:20px 0 16px;
+}
+.energy-label {
+  font-size:12px; color:var(--text3); letter-spacing:0.1em; margin-bottom:8px;
+}
+.energy-name {
+  font-family:'Noto Serif SC',serif;
+  font-size:28px; font-weight:300; color:var(--accent);
+  text-shadow: 0 0 20px rgba(126,184,247,0.5);
+}
+.energy-num {
+  font-size:15px; color:var(--text3); margin-top:2px;
+}
+
+/* CIRCLE */
+#energy-ring-wrap {
+  display:flex; justify-content:center; margin:16px 0;
+}
+#energy-ring {
+  width:140px; height:140px; position:relative;
+}
+#energy-ring canvas { position:absolute; inset:0; }
+.ring-center {
+  position:absolute; inset:0; display:flex;
+  flex-direction:column; align-items:center; justify-content:center;
+}
+.ring-score { font-size:28px; font-weight:300; color:var(--text); }
+.ring-label { font-size:11px; color:var(--text3); }
+
+/* MIX BARS */
+.mix-bars { margin:12px 0; }
+.mix-row {
+  display:flex; align-items:center; gap:10px;
+  margin-bottom:8px; font-size:13px;
+}
+.mix-name { width:60px; color:var(--text2); flex-shrink:0; }
+.mix-bar-bg {
+  flex:1; height:6px; border-radius:3px;
+  background:rgba(255,255,255,0.07);
+}
+.mix-bar-fill {
+  height:100%; border-radius:3px;
+  background:linear-gradient(90deg, var(--accent2), var(--accent));
+  transition:width .6s cubic-bezier(.4,0,.2,1);
+}
+.mix-pct { width:32px; text-align:right; color:var(--text3); }
+
+/* HINT */
+.energy-hint {
+  text-align:center; padding:12px 16px;
+  font-size:13px; color:var(--text2);
+  font-style:italic; line-height:1.7;
+}
+
+/* TEXTAREA */
+.note-field {
+  width:100%; background:var(--surface2);
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  color:var(--text); font-family:inherit; font-size:14px;
+  padding:12px 14px; resize:none; outline:none;
+  transition:border-color .2s;
+  min-height:80px;
+}
+.note-field:focus { border-color:var(--accent); }
+.note-field::placeholder { color:var(--text3); }
+
+/* BTN */
+.btn-primary {
+  width:100%; padding:14px;
+  background:linear-gradient(135deg, rgba(126,184,247,0.2), rgba(167,139,250,0.2));
+  border:1px solid rgba(126,184,247,0.4);
+  border-radius:var(--radius-sm);
+  color:var(--accent); font-family:inherit; font-size:15px;
+  font-weight:500; cursor:pointer; letter-spacing:0.04em;
+  transition:all .2s;
+}
+.btn-primary:hover {
+  background:linear-gradient(135deg, rgba(126,184,247,0.3), rgba(167,139,250,0.3));
+  box-shadow:0 0 20px rgba(126,184,247,0.2);
+}
+.btn-primary:active { transform:scale(0.98); }
+
+.btn-sm {
+  padding:7px 14px; border-radius:8px;
+  background:var(--surface2); border:1px solid var(--border);
+  color:var(--text2); font-family:inherit; font-size:12px;
+  cursor:pointer; transition:all .2s;
+}
+.btn-sm:hover { border-color:var(--accent); color:var(--accent); }
+
+/* TOAST */
+#toast {
+  position:fixed; bottom:90px; left:50%; transform:translateX(-50%) translateY(20px);
+  background:rgba(10,20,40,0.95); border:1px solid var(--border2);
+  border-radius:24px; padding:10px 24px;
+  color:var(--accent); font-size:14px;
+  opacity:0; transition:all .3s; z-index:200;
+  pointer-events:none; white-space:nowrap;
+}
+#toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+/* HISTORY */
+.record-item {
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  padding:14px 16px; margin-bottom:10px;
+  position:relative;
+}
+.record-top {
+  display:flex; align-items:flex-start; justify-content:space-between;
+  margin-bottom:8px;
+}
+.record-time { font-size:12px; color:var(--text3); }
+.record-level {
+  font-family:'Noto Serif SC',serif;
+  font-size:16px; color:var(--accent);
+}
+.record-mix { font-size:12px; color:var(--text2); margin-bottom:6px; }
+.record-note { font-size:13px; color:var(--text2); font-style:italic; }
+.record-actions {
+  display:flex; gap:8px; margin-top:10px;
+}
+
+/* SEARCH */
+.search-box {
+  display:flex; align-items:center; gap:8px;
+  background:var(--surface2); border:1px solid var(--border);
+  border-radius:var(--radius-sm); padding:10px 14px;
+  margin-bottom:16px;
+}
+.search-box input {
+  flex:1; background:none; border:none; outline:none;
+  color:var(--text); font-family:inherit; font-size:14px;
+}
+.search-box input::placeholder { color:var(--text3); }
+
+/* STATS */
+.stats-row {
+  display:grid; grid-template-columns:repeat(3,1fr); gap:10px;
+  margin-bottom:16px;
+}
+.stat-box {
+  background:var(--surface2); border:1px solid var(--border);
+  border-radius:var(--radius-sm); padding:14px 10px; text-align:center;
+}
+.stat-num {
+  font-size:22px; font-weight:300; color:var(--accent);
+  font-family:'Noto Serif SC',serif;
+}
+.stat-label { font-size:11px; color:var(--text3); margin-top:4px; }
+
+/* CHART */
+#chart-canvas {
+  width:100%; border-radius:var(--radius-sm);
+  background:var(--surface2);
+  display:block;
+}
+.chart-tabs {
+  display:flex; gap:8px; margin-bottom:12px;
+}
+.chart-tab {
+  padding:7px 16px; border-radius:20px;
+  background:var(--surface2); border:1px solid var(--border);
+  color:var(--text2); font-size:13px; cursor:pointer;
+  font-family:inherit; transition:all .2s;
+}
+.chart-tab.active {
+  background:rgba(126,184,247,0.15);
+  border-color:var(--accent); color:var(--accent);
+}
+.chart-summary {
+  display:grid; grid-template-columns:repeat(3,1fr);
+  gap:10px; margin-top:12px;
+}
+.chart-stat { text-align:center; }
+.chart-stat-num { font-size:18px; color:var(--text); font-weight:300; }
+.chart-stat-label { font-size:11px; color:var(--text3); }
+.trend-desc {
+  font-size:13px; color:var(--text2); line-height:1.8;
+  padding:14px; background:var(--surface2);
+  border:1px solid var(--border); border-radius:var(--radius-sm);
+  margin-top:12px;
+}
+.export-row { display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
+
+/* INSIGHT */
+.insight-section { margin-bottom:16px; }
+.insight-title {
+  font-size:13px; color:var(--text3); letter-spacing:0.08em;
+  margin-bottom:10px; display:flex; align-items:center; gap:8px;
+}
+.insight-title::after { content:''; flex:1; height:1px; background:var(--border); }
+.insight-chip {
+  display:inline-block; padding:5px 12px; border-radius:14px;
+  background:rgba(126,184,247,0.10); border:1px solid rgba(126,184,247,0.25);
+  color:var(--accent); font-size:12px; margin:4px 4px 4px 0;
+}
+.insight-chip.warn {
+  background:rgba(248,113,113,0.10); border-color:rgba(248,113,113,0.25);
+  color:var(--low);
+}
+.insight-chip.good {
+  background:rgba(103,232,169,0.10); border-color:rgba(103,232,169,0.25);
+  color:var(--accent3);
+}
+.action-card {
+  background:linear-gradient(135deg, rgba(126,184,247,0.08), rgba(167,139,250,0.08));
+  border:1px solid rgba(126,184,247,0.2);
+  border-radius:var(--radius-sm); padding:16px;
+  margin-bottom:12px;
+}
+.action-card h4 {
+  font-size:13px; color:var(--accent); margin-bottom:6px;
+}
+.action-card p { font-size:14px; color:var(--text2); line-height:1.7; }
+.suggestion-grid {
+  display:grid; grid-template-columns:repeat(4,1fr); gap:8px;
+}
+.suggestion-item {
+  background:var(--surface2); border:1px solid var(--border);
+  border-radius:var(--radius-sm); padding:12px 6px;
+  text-align:center; font-size:12px; color:var(--text2);
+  cursor:pointer; transition:all .2s;
+}
+.suggestion-item:hover { border-color:var(--accent); color:var(--text); }
+.suggestion-item .s-icon { font-size:22px; margin-bottom:4px; }
+
+.empty-state {
+  text-align:center; padding:40px 20px;
+  color:var(--text3); font-size:14px;
+}
+.empty-state .e-icon { font-size:48px; margin-bottom:12px; opacity:.4; }
+
+/* MODAL */
+#modal {
+  position:fixed; inset:0; z-index:300;
+  background:rgba(0,0,0,0.7); backdrop-filter:blur(8px);
+  display:none; align-items:flex-end; justify-content:center;
+}
+#modal.open { display:flex; }
+.modal-box {
+  background:#0a1628; border:1px solid var(--border2);
+  border-radius:20px 20px 0 0; padding:24px 20px;
+  width:100%; max-width:480px; max-height:80vh; overflow-y:auto;
+}
+.modal-title {
+  font-size:16px; font-weight:500; margin-bottom:16px;
+  display:flex; justify-content:space-between; align-items:center;
+}
+.modal-close {
+  background:none; border:none; color:var(--text3);
+  font-size:20px; cursor:pointer; line-height:1;
+}
+
+/* ANIM */
+@keyframes fadeUp {
+  from { opacity:0; transform:translateY(16px); }
+  to { opacity:1; transform:translateY(0); }
+}
+.fade-up { animation:fadeUp .4s ease both; }
+
+@keyframes pulse-ring {
+  0%,100% { transform:scale(1); opacity:.6; }
+  50% { transform:scale(1.05); opacity:1; }
+}
+
+/* scrollbar */
+::-webkit-scrollbar { width:4px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:var(--border2); border-radius:2px; }
+</style>
+</head>
+<body>
+
+<canvas id="stars-canvas"></canvas>
+
+<div id="app">
+
+  <!-- ① 今日觉察 -->
+  <div class="page active" id="page-today">
+    <div class="page-header fade-up">
+      <div class="date-time" id="datetime-display"></div>
+      <h1>此刻，你正在经历什么？</h1>
+      <p>请选择所有符合当下状态</p>
+    </div>
+
+    <div id="dimensions-wrap"></div>
+
+    <div class="card fade-up" id="result-card">
+      <div class="card-title">当前体验</div>
+      <div class="energy-level-display">
+        <div class="energy-label">根据你此刻的选择，当前体验较接近</div>
+        <div class="energy-name" id="res-name">—</div>
+        <div class="energy-num" id="res-num"></div>
+      </div>
+      <div id="energy-ring-wrap">
+        <div id="energy-ring">
+          <canvas id="ring-canvas" width="140" height="140"></canvas>
+          <div class="ring-center">
+            <div class="ring-score" id="ring-score">—</div>
+            <div class="ring-label">能量值</div>
+          </div>
+        </div>
+      </div>
+      <div class="mix-bars" id="mix-bars"></div>
+      <div class="energy-hint" id="energy-hint"></div>
+    </div>
+
+    <div class="card fade-up">
+      <div class="card-title">此刻备注</div>
+      <textarea class="note-field" id="note-input" placeholder="此刻最想记录什么？"></textarea>
+    </div>
+
+    <div style="padding:0 0 16px;">
+      <button class="btn-primary" id="save-btn" onclick="saveRecord()">确认记录</button>
+    </div>
+  </div>
+
+  <!-- ② 历史记录 -->
+  <div class="page" id="page-history">
+    <div class="page-header fade-up">
+      <h1>历史记录</h1>
+    </div>
+    <div class="search-box">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input id="search-input" placeholder="搜索备注…" oninput="renderHistory()">
+    </div>
+    <div class="stats-row" id="history-stats"></div>
+    <div id="history-list"></div>
+  </div>
+
+  <!-- ③ 能量趋势 -->
+  <div class="page" id="page-trend">
+    <div class="page-header fade-up">
+      <h1>能量趋势</h1>
+    </div>
+    <div class="chart-tabs">
+      <button class="chart-tab active" onclick="setTrendRange(7,this)">近7天</button>
+      <button class="chart-tab" onclick="setTrendRange(30,this)">近30天</button>
+      <button class="chart-tab" onclick="setTrendRange(0,this)">全部</button>
+    </div>
+    <div class="card">
+      <canvas id="chart-canvas" height="200"></canvas>
+      <div class="chart-summary" id="chart-summary"></div>
+      <div class="trend-desc" id="trend-desc"></div>
+    </div>
+    <div class="export-row">
+      <button class="btn-sm" onclick="exportJSON()">导出 JSON</button>
+      <button class="btn-sm" onclick="exportCSV()">导出 CSV</button>
+      <button class="btn-sm" onclick="importData()">导入备份</button>
+      <input type="file" id="import-input" accept=".json" style="display:none" onchange="handleImport(event)">
+    </div>
+  </div>
+
+  <!-- ④ 洞察 -->
+  <div class="page" id="page-insight">
+    <div class="page-header fade-up">
+      <h1>洞察</h1>
+    </div>
+    <div id="insight-content"></div>
+  </div>
+
+</div>
+
+<!-- Bottom Nav -->
+<nav id="nav">
+  <button class="nav-btn active" onclick="switchPage('today',this)" id="nav-today">
+    <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3M4.93 4.93l2.12 2.12m9.9 9.9 2.12 2.12M4.93 19.07l2.12-2.12m9.9-9.9 2.12-2.12"/></svg>
+    今日觉察
+    <div class="dot"></div>
+  </button>
+  <button class="nav-btn" onclick="switchPage('history',this)" id="nav-history">
+    <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+    历史记录
+    <div class="dot"></div>
+  </button>
+  <button class="nav-btn" onclick="switchPage('trend',this)" id="nav-trend">
+    <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    能量趋势
+    <div class="dot"></div>
+  </button>
+  <button class="nav-btn" onclick="switchPage('insight',this)" id="nav-insight">
+    <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 18h6m-3-9v9M12 3a6 6 0 1 1 0 12"/></svg>
+    洞察
+    <div class="dot"></div>
+  </button>
+</nav>
+
+<div id="toast"></div>
+
+<!-- Edit Modal -->
+<div id="modal">
+  <div class="modal-box">
+    <div class="modal-title">
+      编辑备注
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <textarea class="note-field" id="modal-note" style="min-height:100px;margin-bottom:12px;"></textarea>
+    <button class="btn-primary" onclick="saveModalEdit()">保存</button>
+  </div>
+</div>
+
+<script>
+// ────── DATA ──────
+const LEVELS = [
+  {v:20,name:'羞耻'},{v:30,name:'内疚'},{v:50,name:'冷漠'},
+  {v:75,name:'悲伤'},{v:100,name:'恐惧'},{v:125,name:'欲望'},
+  {v:150,name:'愤怒'},{v:175,name:'骄傲'},{v:200,name:'勇气'},
+  {v:250,name:'满意'},{v:310,name:'主动'},{v:350,name:'宽容'},
+  {v:400,name:'理智'},{v:500,name:'爱'},{v:540,name:'喜悦'},
+  {v:600,name:'和平'},{v:700,name:'启蒙'}
+];
+
+const DIMENSIONS = [
+  {id:'body', label:'身体状态', icon:'🌿', items:[
+    {l:'身体轻盈',v:500},{l:'呼吸顺畅',v:500},{l:'精神饱满',v:540},
+    {l:'行动有力量',v:350},{l:'身体放松',v:350},{l:'睡醒恢复感',v:250},
+    {l:'肩颈紧绷',v:100},{l:'胸口压迫',v:75},{l:'容易疲惫',v:75},
+    {l:'身体沉重',v:50},{l:'不想起身',v:50},{l:'呼吸急促',v:100}
+  ]},
+  {id:'emotion', label:'情绪状态', icon:'💫', items:[
+    {l:'感恩',v:540},{l:'平静',v:600},{l:'满足',v:250},{l:'有希望',v:310},
+    {l:'真诚喜悦',v:540},{l:'温柔',v:500},
+    {l:'焦虑',v:100},{l:'急躁',v:150},{l:'委屈',v:75},
+    {l:'想哭',v:75},{l:'羞愧',v:20},{l:'无力',v:50},{l:'烦躁',v:150}
+  ]},
+  {id:'mind', label:'思维模式', icon:'🧠', items:[
+    {l:'愿意承担责任',v:310},{l:'看见机会',v:350},{l:'愿意学习',v:310},
+    {l:'理解别人',v:400},{l:'允许发生',v:350},{l:'相信过程',v:400},
+    {l:'总想证明自己',v:175},{l:'害怕失败',v:100},{l:'反复纠结',v:125},
+    {l:'控制欲强',v:150},{l:'一直比较',v:175},{l:'自我批评',v:30}
+  ]},
+  {id:'social', label:'人际互动', icon:'🤝', items:[
+    {l:'乐于帮助',v:500},{l:'真心祝福别人',v:540},{l:'愿意合作',v:350},
+    {l:'能够倾听',v:400},{l:'想连接世界',v:500},
+    {l:'期待认可',v:175},{l:'容易抱怨',v:150},{l:'容易受伤',v:75},
+    {l:'想逃离人群',v:50},{l:'不想说话',v:50}
+  ]},
+  {id:'action', label:'行动状态', icon:'⚡', items:[
+    {l:'主动开始',v:310},{l:'持续行动',v:350},{l:'专注',v:400},
+    {l:'规律生活',v:350},{l:'温柔坚持',v:500},
+    {l:'拖延',v:100},{l:'刷手机逃避',v:75},{l:'无法决定',v:125},
+    {l:'想放弃',v:50},{l:'停滞不前',v:50}
+  ]}
+];
+
+const SUGGESTIONS = [
+  {icon:'💧',text:'喝水'},{icon:'🚶',text:'散步'},{icon:'😴',text:'休息'},
+  {icon:'👋',text:'联系朋友'},{icon:'☀️',text:'晒太阳'},{icon:'🧘',text:'冥想'},
+  {icon:'🏃',text:'运动'},{icon:'🙏',text:'记录感恩'}
+];
+
+// ────── STATE ──────
+let selected = {}; // key: 'dimId:label', value: v
+let currentResult = null;
+let trendRange = 7;
+let editingId = null;
+
+// ────── STORAGE ──────
+function getRecords() {
+  try { return JSON.parse(localStorage.getItem('ef_records') || '[]'); }
+  catch { return []; }
+}
+function setRecords(arr) {
+  localStorage.setItem('ef_records', JSON.stringify(arr));
+}
+
+// ────── STARS ──────
+(function() {
+  const canvas = document.getElementById('stars-canvas');
+  const ctx = canvas.getContext('2d');
+  let W, H, stars = [], particles = [];
+
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+    initStars();
+  }
+
+  function initStars() {
+    stars = [];
+    const n = Math.floor(W * H / 4000);
+    for (let i = 0; i < n; i++) {
+      stars.push({
+        x: Math.random() * W, y: Math.random() * H,
+        r: Math.random() * 1.4 + 0.2,
+        a: Math.random(),
+        speed: Math.random() * 0.003 + 0.001,
+        phase: Math.random() * Math.PI * 2
+      });
+    }
+    particles = [];
+    for (let i = 0; i < 18; i++) {
+      particles.push({
+        x: Math.random() * W, y: Math.random() * H,
+        vx: (Math.random() - 0.5) * 0.3,
+        vy: (Math.random() - 0.5) * 0.3,
+        r: Math.random() * 2 + 1,
+        a: Math.random() * 0.3 + 0.05
+      });
+    }
+  }
+
+  let t = 0;
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    // nebula bg
+    const g = ctx.createRadialGradient(W*0.3, H*0.2, 0, W*0.3, H*0.2, W*0.6);
+    g.addColorStop(0, 'rgba(20,40,90,0.18)');
+    g.addColorStop(1, 'transparent');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+    const g2 = ctx.createRadialGradient(W*0.8, H*0.7, 0, W*0.8, H*0.7, W*0.5);
+    g2.addColorStop(0, 'rgba(80,30,120,0.10)');
+    g2.addColorStop(1, 'transparent');
+    ctx.fillStyle = g2;
+    ctx.fillRect(0, 0, W, H);
+
+    t += 0.005;
+    stars.forEach(s => {
+      const a = s.a * (0.5 + 0.5 * Math.sin(t * s.speed * 200 + s.phase));
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
+      ctx.fillStyle = `rgba(220,235,255,${a})`;
+      ctx.fill();
+    });
+    particles.forEach(p => {
+      p.x += p.vx; p.y += p.vy;
+      if (p.x < 0) p.x = W; if (p.x > W) p.x = 0;
+      if (p.y < 0) p.y = H; if (p.y > H) p.y = 0;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+      ctx.fillStyle = `rgba(126,184,247,${p.a})`;
+      ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+
+  window.addEventListener('resize', resize);
+  resize(); draw();
+})();
+
+// ────── DATETIME ──────
+function updateDatetime() {
+  const now = new Date();
+  const d = now.toLocaleDateString('zh-CN',{year:'numeric',month:'long',day:'numeric',weekday:'long'});
+  const t = now.toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});
+  const el = document.getElementById('datetime-display');
+  if (el) el.textContent = `${d} · ${t}`;
+}
+updateDatetime();
+setInterval(updateDatetime, 10000);
+
+// ────── BUILD DIMENSIONS ──────
+function buildDimensions() {
+  const wrap = document.getElementById('dimensions-wrap');
+  wrap.innerHTML = '';
+  DIMENSIONS.forEach(dim => {
+    const sec = document.createElement('div');
+    sec.className = 'fade-up';
+    sec.innerHTML = `
+      <div class="collapsible-header" onclick="toggleCollapse(this)">
+        <h3>${dim.icon} ${dim.label}</h3>
+        <span class="chevron">▾</span>
+      </div>
+      <div class="collapsible-body">
+        ${dim.items.map(it => `<button class="chip" data-key="${dim.id}:${it.l}" data-v="${it.v}" onclick="toggleChip(this)">${it.l}</button>`).join('')}
+      </div>
+    `;
+    wrap.appendChild(sec);
+  });
+}
+buildDimensions();
+
+function toggleCollapse(header) {
+  header.classList.toggle('open');
+  const body = header.nextElementSibling;
+  body.classList.toggle('open');
+}
+
+function toggleChip(btn) {
+  const key = btn.dataset.key;
+  const v = +btn.dataset.v;
+  if (selected[key] !== undefined) {
+    delete selected[key];
+    btn.classList.remove('selected','selected-high');
+  } else {
+    selected[key] = v;
+    btn.classList.add(v >= 400 ? 'selected-high' : 'selected');
+  }
+  computeResult();
+}
+
+// ────── COMPUTE ──────
+function mapLevel(score) {
+  let best = LEVELS[0];
+  LEVELS.forEach(l => { if (Math.abs(l.v - score) < Math.abs(best.v - score)) best = l; });
+  return best;
+}
+
+function getHint(score) {
+  if (score <= 75) return '允许自己慢一点。你正在经历的，值得被温柔对待。';
+  if (score <= 175) return '觉察已经开始发生。看见自己，已经是改变的开始。';
+  if (score <= 350) return '生命正在向上流动。每一个选择，都在塑造你的方向。';
+  if (score <= 540) return '你的内在正在变得宽广。这份开放，是最真实的力量。';
+  return '安住于此刻。此时此地，一切都是完整的。';
+}
+
+function computeResult() {
+  const vals = Object.entries(selected);
+  if (vals.length === 0) {
+    document.getElementById('result-card').classList.remove('visible');
+    currentResult = null;
+    return;
+  }
+  document.getElementById('result-card').classList.add('visible');
+
+  const avg = vals.reduce((s,[,v]) => s+v, 0) / vals.length;
+  const level = mapLevel(avg);
+
+  // mix: count by level names, group
+  const counts = {};
+  vals.forEach(([,v]) => {
+    const lv = mapLevel(v).name;
+    counts[lv] = (counts[lv]||0)+1;
+  });
+  const total = vals.length;
+  const sorted = Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,4);
+  const mix = sorted.map(([name,cnt]) => ({name, pct: Math.round(cnt/total*100)}));
+
+  document.getElementById('res-name').textContent = level.name;
+  document.getElementById('res-num').textContent = `（${level.v}）`;
+  document.getElementById('ring-score').textContent = Math.round(avg);
+  document.getElementById('energy-hint').textContent = getHint(avg);
+
+  drawRing(avg);
+
+  const mb = document.getElementById('mix-bars');
+  mb.innerHTML = mix.map(m => `
+    <div class="mix-row">
+      <div class="mix-name">${m.name}</div>
+      <div class="mix-bar-bg"><div class="mix-bar-fill" style="width:${m.pct}%"></div></div>
+      <div class="mix-pct">${m.pct}%</div>
+    </div>
+  `).join('');
+
+  currentResult = {avg: Math.round(avg), level, mix};
+}
+
+// ────── RING ──────
+function drawRing(score) {
+  const canvas = document.getElementById('ring-canvas');
+  const ctx = canvas.getContext('2d');
+  const W = 140, CX = 70, CY = 70, R = 56, LW = 10;
+  ctx.clearRect(0,0,W,W);
+  const maxScore = 700;
+  const pct = Math.min(score/maxScore, 1);
+
+  // bg ring
+  ctx.beginPath();
+  ctx.arc(CX,CY,R,-Math.PI/2, Math.PI*2*1.5, false);
+  ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+  ctx.lineWidth = LW; ctx.lineCap='round'; ctx.stroke();
+
+  // color based on score
+  let c1, c2;
+  if (score < 200) { c1='#f87171'; c2='#fbbf24'; }
+  else if (score < 400) { c1='#fbbf24'; c2='#34d399'; }
+  else { c1='#34d399'; c2='#818cf8'; }
+
+  const grad = ctx.createLinearGradient(0, W, W, 0);
+  grad.addColorStop(0, c1); grad.addColorStop(1, c2);
+
+  ctx.beginPath();
+  ctx.arc(CX,CY,R,-Math.PI/2, -Math.PI/2 + Math.PI*2*pct, false);
+  ctx.strokeStyle = grad;
+  ctx.lineWidth = LW; ctx.lineCap='round'; ctx.stroke();
+
+  // glow
+  ctx.beginPath();
+  ctx.arc(CX,CY,R,-Math.PI/2, -Math.PI/2 + Math.PI*2*pct, false);
+  ctx.strokeStyle = c2;
+  ctx.lineWidth = 2; ctx.globalAlpha=0.3; ctx.stroke();
+  ctx.globalAlpha=1;
+}
+
+// ────── SAVE ──────
+function saveRecord() {
+  if (!currentResult) { showToast('请先选择状态'); return; }
+  const note = document.getElementById('note-input').value.trim();
+  const now = new Date();
+  const rec = {
+    id: Date.now(),
+    date: now.toLocaleDateString('zh-CN'),
+    time: now.toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}),
+    ts: now.getTime(),
+    avg: currentResult.avg,
+    level: currentResult.level.name,
+    levelV: currentResult.level.v,
+    mix: currentResult.mix,
+    selections: {...selected},
+    note
+  };
+  const recs = getRecords();
+  recs.push(rec);
+  setRecords(recs);
+
+  // reset
+  selected = {};
+  document.querySelectorAll('.chip.selected, .chip.selected-high')
+    .forEach(c => c.classList.remove('selected','selected-high'));
+  document.getElementById('note-input').value = '';
+  document.getElementById('result-card').classList.remove('visible');
+  currentResult = null;
+
+  showToast('✨ 已记录');
+}
+
+// ────── TOAST ──────
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ────── NAV ──────
+function switchPage(id, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  btn.classList.add('active');
+  if (id === 'history') renderHistory();
+  if (id === 'trend') renderTrend();
+  if (id === 'insight') renderInsight();
+}
+
+// ────── HISTORY ──────
+function renderHistory() {
+  const q = document.getElementById('search-input').value.trim().toLowerCase();
+  let recs = getRecords().slice().reverse();
+  if (q) recs = recs.filter(r => r.note && r.note.toLowerCase().includes(q));
+
+  const all = getRecords();
+  const avg = all.length ? Math.round(all.reduce((s,r)=>s+r.avg,0)/all.length) : 0;
+  const top = all.length ? mapLevel(avg).name : '—';
+
+  document.getElementById('history-stats').innerHTML = `
+    <div class="stat-box"><div class="stat-num">${all.length}</div><div class="stat-label">总记录</div></div>
+    <div class="stat-box"><div class="stat-num">${avg||'—'}</div><div class="stat-label">平均能量</div></div>
+    <div class="stat-box"><div class="stat-num">${top}</div><div class="stat-label">常见层级</div></div>
+  `;
+
+  const list = document.getElementById('history-list');
+  if (!recs.length) {
+    list.innerHTML = '<div class="empty-state"><div class="e-icon">🌌</div>暂无记录</div>';
+    return;
+  }
+  list.innerHTML = recs.map(r => `
+    <div class="record-item fade-up" id="rec-${r.id}">
+      <div class="record-top">
+        <div>
+          <div class="record-time">${r.date} ${r.time}</div>
+          <div class="record-level">${r.level}（${r.levelV}）</div>
+        </div>
+        <div style="font-size:22px; font-family:'Noto Serif SC',serif; color:var(--accent); opacity:.6">${r.avg}</div>
+      </div>
+      <div class="record-mix">${(r.mix||[]).map(m=>`${m.name} ${m.pct}%`).join(' · ')}</div>
+      ${r.note ? `<div class="record-note">"${r.note}"</div>` : ''}
+      <div class="record-actions">
+        <button class="btn-sm" onclick="editRecord(${r.id})">编辑备注</button>
+        <button class="btn-sm" style="color:var(--low);border-color:rgba(248,113,113,.3)" onclick="deleteRecord(${r.id})">删除</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function deleteRecord(id) {
+  if (!confirm('确认删除这条记录？')) return;
+  setRecords(getRecords().filter(r => r.id !== id));
+  renderHistory();
+  showToast('已删除');
+}
+
+function editRecord(id) {
+  const r = getRecords().find(r=>r.id===id);
+  if (!r) return;
+  editingId = id;
+  document.getElementById('modal-note').value = r.note || '';
+  document.getElementById('modal').classList.add('open');
+}
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+  editingId = null;
+}
+function saveModalEdit() {
+  if (!editingId) return;
+  const recs = getRecords();
+  const idx = recs.findIndex(r=>r.id===editingId);
+  if (idx > -1) {
+    recs[idx].note = document.getElementById('modal-note').value.trim();
+    setRecords(recs);
+  }
+  closeModal();
+  renderHistory();
+  showToast('已保存');
+}
+document.getElementById('modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal')) closeModal();
+});
+
+// ────── TREND ──────
+function setTrendRange(n, btn) {
+  trendRange = n;
+  document.querySelectorAll('.chart-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTrend();
+}
+
+function renderTrend() {
+  const all = getRecords();
+  let recs = all;
+  if (trendRange > 0) {
+    const cutoff = Date.now() - trendRange * 86400000;
+    recs = all.filter(r => r.ts >= cutoff);
+  }
+
+  // group by date
+  const byDate = {};
+  recs.forEach(r => {
+    if (!byDate[r.date]) byDate[r.date] = [];
+    byDate[r.date].push(r.avg);
+  });
+  const dates = Object.keys(byDate).sort();
+  const avgs = dates.map(d => {
+    const vs = byDate[d];
+    return Math.round(vs.reduce((s,v)=>s+v,0)/vs.length);
+  });
+
+  drawChart(dates, avgs);
+
+  const summary = document.getElementById('chart-summary');
+  if (!avgs.length) {
+    summary.innerHTML = '';
+    document.getElementById('trend-desc').textContent = '暂无数据，开始记录你的状态吧。';
+    return;
+  }
+  const avg = Math.round(avgs.reduce((s,v)=>s+v,0)/avgs.length);
+  const mx = Math.max(...avgs);
+  const mn = Math.min(...avgs);
+  summary.innerHTML = `
+    <div class="chart-stat"><div class="chart-stat-num">${avg}</div><div class="chart-stat-label">平均</div></div>
+    <div class="chart-stat"><div class="chart-stat-num" style="color:var(--high)">${mx}</div><div class="chart-stat-label">最高</div></div>
+    <div class="chart-stat"><div class="chart-stat-num" style="color:var(--low)">${mn}</div><div class="chart-stat-label">最低</div></div>
+  `;
+
+  let desc = '';
+  const trend = avgs.length > 1 ? avgs[avgs.length-1] - avgs[0] : 0;
+  if (trend > 50) desc = '整体来看，你的能量状态呈上升趋势，生命正在向更高的方向流动。';
+  else if (trend < -50) desc = '近期能量有所起伏，这是觉察的机会。照顾好自己，允许一切慢慢展开。';
+  else desc = '能量状态相对稳定，你在保持一种内在的平衡。';
+  if (avg >= 400) desc += ' 你的整体状态处于较高的能量层级，内在的宽广正在显现。';
+  else if (avg < 200) desc += ' 给自己一些温柔的空间，每一次觉察都是前进的一步。';
+  document.getElementById('trend-desc').textContent = desc;
+}
+
+function drawChart(dates, avgs) {
+  const canvas = document.getElementById('chart-canvas');
+  const W = canvas.offsetWidth || 400;
+  canvas.width = W * window.devicePixelRatio;
+  canvas.height = 200 * window.devicePixelRatio;
+  canvas.style.height = '200px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+  const cw = W, ch = 200;
+  ctx.clearRect(0,0,cw,ch);
+
+  if (!avgs.length) {
+    ctx.fillStyle = 'rgba(255,255,255,0.2)';
+    ctx.font = '14px Noto Sans SC';
+    ctx.textAlign = 'center';
+    ctx.fillText('暂无数据', cw/2, ch/2);
+    return;
+  }
+
+  const pad = {t:20, b:36, l:40, r:16};
+  const pw = cw - pad.l - pad.r, ph = ch - pad.t - pad.b;
+  const mn = Math.max(0, Math.min(...avgs) - 50);
+  const mx = Math.min(700, Math.max(...avgs) + 50);
+  const range = mx - mn || 1;
+
+  function px(i) { return pad.l + (avgs.length === 1 ? pw/2 : i/(avgs.length-1)*pw); }
+  function py(v) { return pad.t + (1-(v-mn)/range)*ph; }
+
+  // grid
+  [200,400,600].forEach(g => {
+    if (g < mn || g > mx) return;
+    const y = py(g);
+    ctx.beginPath();
+    ctx.moveTo(pad.l, y); ctx.lineTo(pad.l+pw, y);
+    ctx.strokeStyle='rgba(255,255,255,0.05)'; ctx.lineWidth=1; ctx.stroke();
+    ctx.fillStyle='rgba(255,255,255,0.2)'; ctx.font='10px Noto Sans SC';
+    ctx.textAlign='right'; ctx.fillText(g, pad.l-6, y+4);
+  });
+
+  // fill
+  if (avgs.length > 1) {
+    ctx.beginPath();
+    ctx.moveTo(px(0), py(avgs[0]));
+    avgs.forEach((v,i) => { if(i>0) ctx.lineTo(px(i),py(v)); });
+    ctx.lineTo(px(avgs.length-1), pad.t+ph);
+    ctx.lineTo(px(0), pad.t+ph);
+    ctx.closePath();
+    const fg = ctx.createLinearGradient(0,pad.t,0,pad.t+ph);
+    fg.addColorStop(0,'rgba(126,184,247,0.25)');
+    fg.addColorStop(1,'rgba(126,184,247,0.0)');
+    ctx.fillStyle=fg; ctx.fill();
+  }
+
+  // line
+  ctx.beginPath();
+  avgs.forEach((v,i) => { i===0 ? ctx.moveTo(px(i),py(v)) : ctx.lineTo(px(i),py(v)); });
+  const lg = ctx.createLinearGradient(pad.l,0,pad.l+pw,0);
+  lg.addColorStop(0,'#7eb8f7'); lg.addColorStop(1,'#a78bfa');
+  ctx.strokeStyle=lg; ctx.lineWidth=2; ctx.lineJoin='round'; ctx.stroke();
+
+  // dots
+  avgs.forEach((v,i) => {
+    ctx.beginPath();
+    ctx.arc(px(i), py(v), 4, 0, Math.PI*2);
+    ctx.fillStyle='#7eb8f7'; ctx.fill();
+  });
+
+  // x labels
+  const step = Math.max(1, Math.ceil(dates.length/5));
+  ctx.fillStyle='rgba(255,255,255,0.3)'; ctx.font='10px Noto Sans SC'; ctx.textAlign='center';
+  dates.forEach((d,i) => {
+    if (i % step !== 0 && i !== dates.length-1) return;
+    const parts = d.replace('年','/').replace('月','/').replace('日','');
+    ctx.fillText(parts, px(i), ch - 6);
+  });
+}
+
+// ────── EXPORT / IMPORT ──────
+function exportJSON() {
+  const data = getRecords();
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+  downloadBlob(blob, 'energy-flow.json');
+}
+function exportCSV() {
+  const data = getRecords();
+  const rows = [['日期','时间','能量值','层级','混合','备注']];
+  data.forEach(r => rows.push([r.date,r.time,r.avg,r.level,(r.mix||[]).map(m=>m.name+''+m.pct+'%').join('/'),r.note||'']));
+  const csv = rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob(['\uFEFF'+csv], {type:'text/csv'});
+  downloadBlob(blob, 'energy-flow.csv');
+}
+function downloadBlob(blob, name) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name; a.click();
+}
+function importData() { document.getElementById('import-input').click(); }
+function handleImport(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (!Array.isArray(data)) throw new Error();
+      const cur = getRecords();
+      const ids = new Set(cur.map(r=>r.id));
+      const merged = [...cur, ...data.filter(r=>!ids.has(r.id))];
+      setRecords(merged);
+      showToast('导入成功 ✨');
+      renderTrend();
+    } catch { showToast('文件格式有误'); }
+    e.target.value = '';
+  };
+  reader.readAsText(file);
+}
+
+// ────── INSIGHT ──────
+function renderInsight() {
+  const recs = getRecords();
+  const el = document.getElementById('insight-content');
+  if (!recs.length) {
+    el.innerHTML = '<div class="empty-state"><div class="e-icon">🌟</div>开始记录你的状态，洞察将在这里生成</div>';
+    return;
+  }
+
+  // dim frequency
+  const dimCount = {body:{},emotion:{},mind:{},social:{},action:{}};
+  recs.forEach(r => {
+    if (!r.selections) return;
+    Object.entries(r.selections).forEach(([key, v]) => {
+      const [dim, label] = key.split(':');
+      if (!dimCount[dim]) return;
+      dimCount[dim][label] = (dimCount[dim][label]||0)+1;
+    });
+  });
+
+  const dimLabels = {body:'身体',emotion:'情绪',mind:'思维',social:'人际',action:'行动'};
+  const dimTopItems = {};
+  Object.entries(dimCount).forEach(([dim, counts]) => {
+    const sorted = Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+    dimTopItems[dim] = sorted.slice(0,3).map(([l])=>l);
+  });
+
+  // strengths vs care
+  const recent = recs.slice(-10);
+  const recentAvg = recent.reduce((s,r)=>s+r.avg,0)/recent.length;
+  const highItems = [], lowItems = [];
+  recent.forEach(r => {
+    if (!r.selections) return;
+    Object.entries(r.selections).forEach(([k,v]) => {
+      if (v >= 350) highItems.push(k.split(':')[1]);
+      else if (v <= 150) lowItems.push(k.split(':')[1]);
+    });
+  });
+  const topHigh = [...new Set(highItems)].slice(0,4);
+  const topLow = [...new Set(lowItems)].slice(0,4);
+
+  // random action
+  const actions = [
+    '今天喝够8杯水，给身体一份温柔的礼物。',
+    '出门走走，哪怕只是楼道或门口。阳光与风都是能量。',
+    '联系一位许久未联系的朋友，真诚地问候一声。',
+    '花5分钟写下今天感恩的3件小事。',
+    '做几次深呼吸，专注于呼气时的放松感。',
+    '为自己泡一杯喜欢的茶或咖啡，慢慢品味。',
+    '整理一个小角落，外在秩序带来内在平静。',
+    '放下手机20分钟，只是静静地存在。'
+  ];
+  const todayAction = actions[Math.floor(Date.now()/86400000) % actions.length];
+
+  const shuffle = a => [...a].sort(()=>Math.random()-.5);
+  const picks = shuffle(SUGGESTIONS).slice(0,4);
+
+  el.innerHTML = `
+    <div class="insight-section fade-up">
+      <div class="insight-title">最近常出现的状态</div>
+      ${Object.entries(dimTopItems).map(([dim, items]) => items.length ? `
+        <div style="margin-bottom:8px">
+          <span style="font-size:12px;color:var(--text3);margin-right:8px">${dimLabels[dim]}</span>
+          ${items.map(i=>`<span class="insight-chip">${i}</span>`).join('')}
+        </div>
+      ` : '').join('')}
+    </div>
+
+    <div class="insight-section fade-up">
+      <div class="insight-title">最近支持你的力量</div>
+      ${topHigh.length ? topHigh.map(i=>`<span class="insight-chip good">${i}</span>`).join('') : '<span style="color:var(--text3);font-size:13px">继续记录，力量将显现</span>'}
+    </div>
+
+    <div class="insight-section fade-up">
+      <div class="insight-title">可能需要照顾的部分</div>
+      ${topLow.length ? topLow.map(i=>`<span class="insight-chip warn">${i}</span>`).join('') : '<span style="color:var(--text3);font-size:13px">整体状态良好 ✨</span>'}
+    </div>
+
+    <div class="action-card fade-up">
+      <h4>☀️ 今天最小行动</h4>
+      <p>${todayAction}</p>
+    </div>
+
+    <div class="insight-section fade-up">
+      <div class="insight-title">随机建议</div>
+      <div class="suggestion-grid">
+        ${picks.map(s=>`
+          <div class="suggestion-item" onclick="showToast('${s.text}，加油 ✨')">
+            <div class="s-icon">${s.icon}</div>
+            ${s.text}
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+// init
+renderHistory();
+</script>
+</body>
+</html>
